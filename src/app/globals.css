@@ -15,7 +15,7 @@
   }
 
   body {
-    @apply bg-[var(--background)] text-[var(--foreground)] antialiased selection:bg-[#000000] selection:text-white;
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased selection:bg-[#000000] selection:text-white overflow-x-hidden;
   }
 }
 
