@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/ToastProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -12,11 +13,10 @@ export const metadata: Metadata = {
   description: "DotX covers the complete software development lifecycle with autonomous AI agents — from requirements analysis to deployment.",
   icons: {
     icon: [
-      { url: "/logo.jpeg", type: "image/jpeg" },
       { url: "/icon.png", type: "image/png" },
     ],
-    shortcut: "/logo.jpeg",
-    apple: "/logo.jpeg",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
 
@@ -28,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} antialiased`}>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { MacLogo, WindowsLogo, LinuxLogo } from "@/components/OsLogos";
+import { useToast } from "@/components/ToastProvider";
 
 function WireframeGlobe() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -98,6 +99,13 @@ function WireframeGlobe() {
 }
 
 export default function GlobalCTA() {
+  const { showToast } = useToast();
+
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    showToast("Sorry...not available yet, Stay tuned!");
+  };
+
   return (
     <section className="py-12 sm:py-16 md:py-24 bg-black text-white border-t border-black overflow-hidden relative">
       <div className="container mx-auto px-4 md:px-6 max-w-6xl relative z-10">
@@ -138,7 +146,12 @@ export default function GlobalCTA() {
                 { name: "Windows", label: "Download Windows", logo: WindowsLogo },
                 { name: "Linux", label: "Download Linux", logo: LinuxLogo },
               ].map(({ name, label, logo: Logo }) => (
-                <a key={name} href="#" className="clip-button w-full sm:w-auto border-2 border-white bg-white px-4 py-3 sm:px-5 sm:py-2.5 font-mono font-black text-xs sm:text-sm uppercase tracking-widest text-black hover:bg-black hover:text-white hover:border-[#59008C] transition-all cursor-pointer flex items-center justify-center gap-2 sm:gap-2.5 shadow-lg">
+                <a
+                  key={name}
+                  href="#"
+                  onClick={handleDownloadClick}
+                  className="clip-button w-full sm:w-auto border-2 border-white bg-white px-4 py-3 sm:px-5 sm:py-2.5 font-mono font-black text-xs sm:text-sm uppercase tracking-widest text-black hover:bg-black hover:text-white hover:border-[#59008C] transition-all cursor-pointer flex items-center justify-center gap-2 sm:gap-2.5 shadow-lg"
+                >
                   <Logo className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   {label}
                 </a>
