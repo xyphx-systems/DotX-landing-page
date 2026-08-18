@@ -22,7 +22,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = useCallback(
     (
-      message: string = "Sorry...not available yet, Stay tuned!",
+      message: string = "Downloads are currently unavailable. Stay tuned!",
       title: string = "NOTICE // DOTX"
     ) => {
       if (timerRef.current) {

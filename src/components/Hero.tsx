@@ -60,7 +60,7 @@ export default function Hero() {
 
   const handleDownloadClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    showToast("Sorry...not available yet, Stay tuned!");
+    showToast("Downloads are currently unavailable. Stay tuned!");
   };
 
   return (
