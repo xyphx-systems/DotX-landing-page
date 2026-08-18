@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { MacLogo, WindowsLogo, LinuxLogo } from "@/components/OsLogos";
+import { useToast } from "@/components/ToastProvider";
 
 const XYPHX_CHARS = ["X", "Y", "P", "H"];
 
@@ -55,6 +56,13 @@ function ScrambleLine({
 }
 
 export default function Hero() {
+  const { showToast } = useToast();
+
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    showToast("Downloads are currently unavailable. Stay tuned!");
+  };
+
   return (
     <section className="relative min-h-[90vh] sm:min-h-screen flex flex-col items-center justify-center pt-20 sm:pt-24 pb-12 sm:pb-16 overflow-hidden bg-black text-white">
 
@@ -92,6 +100,7 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-3 sm:gap-4 w-full sm:w-auto mt-2 sm:mt-6 px-4 sm:px-0">
           <a
             href="#"
+            onClick={handleDownloadClick}
             className="clip-button w-full sm:w-auto border-2 border-white bg-white px-5 py-3 sm:px-6 sm:py-3 font-mono font-black text-xs sm:text-sm uppercase tracking-widest text-black hover:bg-black hover:text-white hover:border-[#59008C] transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-lg"
           >
             <MacLogo className="w-4 h-4 shrink-0" />
@@ -99,6 +108,7 @@ export default function Hero() {
           </a>
           <a
             href="#"
+            onClick={handleDownloadClick}
             className="clip-button w-full sm:w-auto border-2 border-white bg-white px-5 py-3 sm:px-6 sm:py-3 font-mono font-black text-xs sm:text-sm uppercase tracking-widest text-black hover:bg-black hover:text-white hover:border-[#59008C] transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-lg"
           >
             <WindowsLogo className="w-4 h-4 shrink-0" />
@@ -106,6 +116,7 @@ export default function Hero() {
           </a>
           <a
             href="#"
+            onClick={handleDownloadClick}
             className="clip-button w-full sm:w-auto border-2 border-white bg-white px-5 py-3 sm:px-6 sm:py-3 font-mono font-black text-xs sm:text-sm uppercase tracking-widest text-black hover:bg-black hover:text-white hover:border-[#59008C] transition-all cursor-pointer flex items-center justify-center gap-2.5 shadow-lg"
           >
             <LinuxLogo className="w-4 h-4 shrink-0" />

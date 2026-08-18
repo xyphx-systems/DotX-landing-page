@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence, useInView } from "framer-motion";
+import { motion, AnimatePresence, useInView, useScroll, useTransform } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
 
 const STEP_DELAY = 800; // All 3 columns run at the exact same 800ms speed
@@ -62,7 +62,7 @@ type PhaseState = "idle" | "running" | "done";
 
 export default function WorkflowComparison() {
   const ref = useRef<HTMLDivElement>(null);
-  const mobileScrollRef = useRef<HTMLDivElement>(null);
+  const mobileSectionRef = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true });
   const [tick, setTick] = useState(0);
   const [activeMobileTab, setActiveMobileTab] = useState<number>(0);
@@ -72,6 +72,26 @@ export default function WorkflowComparison() {
   const [dotxDone, setDotxDone] = useState(false);
   const [vibeDone, setVibeDone] = useState(false);
   const [oldDone, setOldDone] = useState(false);
+
+  // Mobile vertical-to-horizontal sticky scroll transformation
+  const { scrollYProgress: mobileScrollProgress } = useScroll({
+    target: mobileSectionRef,
+    offset: ["start start", "end end"],
+  });
+
+  const mobileX = useTransform(mobileScrollProgress, [0, 1], ["0%", "-66.666%"]);
+
+  useEffect(() => {
+    return mobileScrollProgress.on("change", (latest) => {
+      if (latest < 0.33) {
+        setActiveMobileTab(0);
+      } else if (latest < 0.66) {
+        setActiveMobileTab(1);
+      } else {
+        setActiveMobileTab(2);
+      }
+    });
+  }, [mobileScrollProgress]);
 
   useEffect(() => {
     if (!inView) return;
@@ -110,19 +130,15 @@ export default function WorkflowComparison() {
     return () => timers.forEach(clearTimeout);
   }, [inView, tick]);
 
-  const handleMobileScroll = () => {
-    if (!mobileScrollRef.current) return;
-    const { scrollLeft, clientWidth } = mobileScrollRef.current;
-    if (clientWidth > 0) {
-      const idx = Math.round(scrollLeft / clientWidth);
-      setActiveMobileTab(idx);
-    }
-  };
-
   const scrollToSlide = (idx: number) => {
-    if (!mobileScrollRef.current) return;
-    const width = mobileScrollRef.current.clientWidth;
-    mobileScrollRef.current.scrollTo({ left: idx * width, behavior: "smooth" });
+    if (!mobileSectionRef.current) return;
+    const rect = mobileSectionRef.current.getBoundingClientRect();
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const sectionTop = rect.top + scrollTop;
+    const sectionHeight = mobileSectionRef.current.offsetHeight - window.innerHeight;
+    const targetY = sectionTop + (idx / 2) * Math.max(0, sectionHeight);
+
+    window.scrollTo({ top: targetY, behavior: "smooth" });
     setActiveMobileTab(idx);
   };
 
@@ -138,217 +154,219 @@ export default function WorkflowComparison() {
         </div>
 
         {/* ========================================================= */}
-        {/* MOBILE VIEW (Screen < md): 1 Column At A Time Full Width  */}
+        {/* MOBILE VIEW (Screen < md): Sticky Horizontal Scroll       */}
         {/* ========================================================= */}
-        <div className="md:hidden">
-          {/* Mobile Tabs Header */}
-          <div className="grid grid-cols-3 gap-1 bg-neutral-900 p-1 rounded-lg mb-4 border border-white/10 font-mono text-[11px] font-bold">
-            <button
-              onClick={() => scrollToSlide(0)}
-              className={`py-2 px-1 text-center transition-colors rounded ${
-                activeMobileTab === 0 ? "bg-white text-black font-black" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              1. Traditional
-            </button>
-            <button
-              onClick={() => scrollToSlide(1)}
-              className={`py-2 px-1 text-center transition-colors rounded ${
-                activeMobileTab === 1 ? "bg-neutral-800 text-white font-black" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              2. Vibe Coding
-            </button>
-            <button
-              onClick={() => scrollToSlide(2)}
-              className={`py-2 px-1 text-center transition-colors rounded ${
-                activeMobileTab === 2 ? "bg-[#59008C] text-white font-black" : "text-neutral-400 hover:text-white"
-              }`}
-            >
-              3. DOTX Platform
-            </button>
-          </div>
-
-          {/* Swipe Container */}
-          <div
-            ref={mobileScrollRef}
-            onScroll={handleMobileScroll}
-            className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none rounded-xl border border-white/10 shadow-lg touch-pan-x"
-            style={{ scrollSnapType: "x mandatory" }}
-          >
-            {/* Slide 1: Traditional Development */}
-            <div className="w-full min-w-full shrink-0 snap-center bg-white text-black flex flex-col justify-between">
-              <div className="p-4 border-b border-black/10">
-                <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-black/5 text-neutral-600 mb-1">
-                  Manual Workflow
-                </span>
-                <h3 className="font-black font-mono text-base uppercase tracking-wider text-black">
-                  Traditional Development
-                </h3>
-              </div>
-              <div className="divide-y divide-black/10">
-                {phases.map((phase, i) => {
-                  const status = oldStatuses[i];
-                  return (
-                    <div key={i} className="p-3.5 flex items-center gap-3 relative overflow-hidden">
-                      <div className={`w-4 h-4 border shrink-0 flex items-center justify-center transition-all ${
-                        status === "idle" ? "border-black/20 text-black/20" :
-                        status === "running" ? "border-black bg-black/5 text-black" :
-                        "border-black bg-black text-white"
-                      }`}>
-                        {status === "running" && (
-                          <motion.div className="w-1.5 h-1.5 bg-black" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.6, repeat: Infinity }} />
-                        )}
-                        {status === "done" && (
-                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 12 12">
-                            <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                        {status === "idle" && <span className="text-[9px]">☑</span>}
-                      </div>
-                      <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-neutral-400" : "text-black"}`}>
-                        {phase.old}
-                      </p>
-                      {status === "running" && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/10">
-                          <motion.div className="h-full bg-black/40" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="p-4 bg-neutral-100 border-t border-black/10 min-h-[52px] flex items-center">
-                {oldDone ? (
-                  <p className="font-mono text-xs font-black uppercase text-black flex items-center gap-2">
-                    <span className="text-emerald-600 font-bold">✓</span> Project Ready
-                  </p>
-                ) : (
-                  <p className="font-mono text-xs font-bold text-neutral-500 uppercase tracking-wider">Working...</p>
-                )}
-              </div>
-            </div>
-
-            {/* Slide 2: Vibe Coding */}
-            <div className="w-full min-w-full shrink-0 snap-center bg-[#121212] text-white flex flex-col justify-between">
-              <div className="p-4 border-b border-white/10 bg-[#181818]">
-                <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white/10 text-neutral-300 mb-1">
-                  codex, claude code, antigravity, etc.
-                </span>
-                <h3 className="font-black font-mono text-base uppercase tracking-wider text-white">
-                  Vibe Coding
-                </h3>
-              </div>
-              <div className="divide-y divide-white/10">
-                {phases.map((phase, i) => {
-                  const status = vibeStatuses[i];
-                  return (
-                    <div key={i} className="p-3.5 flex items-center gap-3 relative overflow-hidden">
-                      <div className={`w-4 h-4 border shrink-0 flex items-center justify-center transition-all ${
-                        status === "idle" ? "border-white/20 text-white/20" :
-                        status === "running" ? "border-white/40 bg-white/10 text-white" :
-                        "border-white bg-white text-black"
-                      }`}>
-                        {status === "running" && (
-                          <motion.div className="w-1.5 h-1.5 bg-white" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.4, repeat: Infinity }} />
-                        )}
-                        {status === "done" && (
-                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 12 12">
-                            <polyline points="2,6 5,9 10,3" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                        {status === "idle" && <span className="text-[9px]">☑</span>}
-                      </div>
-                      <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-neutral-500" : "text-neutral-200"}`}>
-                        {phase.vibe}
-                      </p>
-                      {status === "running" && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
-                          <motion.div className="h-full bg-white/40" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="p-4 bg-[#181818] border-t border-white/10 min-h-[52px] flex items-center">
-                {vibeDone ? (
-                  <p className="font-mono text-xs font-black uppercase text-white flex items-center gap-2">
-                    <span className="text-emerald-400 font-bold">✓</span> Project Ready
-                  </p>
-                ) : (
-                  <p className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-wider">Prompting...</p>
-                )}
-              </div>
-            </div>
-
-            {/* Slide 3: DOTX Platform */}
-            <div className="w-full min-w-full shrink-0 snap-center bg-[#1a0029] text-white flex flex-col justify-between">
-              <div className="p-4 border-b border-[#59008C]/60 bg-[#240038]">
-                <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-[#59008C] text-white border border-[#59008C] mb-1">
-                  Autonomous AI Platform
-                </span>
-                <h3 className="font-black font-mono text-base uppercase tracking-wider text-[#f3e8ff]">
-                  DOTX Platform
-                </h3>
-              </div>
-              <div className="divide-y divide-[#59008C]/40">
-                {phases.map((phase, i) => {
-                  const status = dotxStatuses[i];
-                  return (
-                    <div key={i} className="p-3.5 flex items-center gap-3 relative overflow-hidden">
-                      <div className={`w-4 h-4 border shrink-0 flex items-center justify-center transition-all ${
-                        status === "idle" ? "border-[#59008C] text-[#59008C] bg-transparent" :
-                        status === "running" ? "border-[#59008C] bg-[#59008C] text-white" :
-                        "border-[#59008C] bg-[#59008C] text-white"
-                      }`}>
-                        {status === "running" && (
-                          <motion.div className="w-1.5 h-1.5 bg-white" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.3, repeat: Infinity }} />
-                        )}
-                        {status === "done" && (
-                          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 12 12">
-                            <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                        {status === "idle" && <span className="text-[9px]">☑</span>}
-                      </div>
-                      <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-[#59008C]/60" : "text-[#f3e8ff]"}`}>
-                        {phase.dotx}
-                      </p>
-                      {status === "running" && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#59008C]/30">
-                          <motion.div className="h-full bg-[#59008C]" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="p-4 bg-[#240038] border-t border-[#59008C]/60 min-h-[52px] flex items-center">
-                {dotxDone ? (
-                  <p className="font-mono text-xs font-black uppercase text-[#f3e8ff] flex items-center gap-2">
-                    <span className="text-emerald-400 font-bold">✓</span> Project Ready
-                  </p>
-                ) : (
-                  <p className="font-mono text-xs font-bold text-[#59008C]/60 uppercase tracking-wider">Executing...</p>
-                )}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Mobile Dots Indicator */}
-          <div className="flex items-center justify-center gap-2 mt-3">
-            {[0, 1, 2].map((idx) => (
+        <div ref={mobileSectionRef} className="md:hidden relative h-[250vh]">
+          <div className="sticky top-20 flex flex-col justify-center py-2">
+            {/* Mobile Tabs Header */}
+            <div className="grid grid-cols-3 gap-1 bg-neutral-900 p-1 rounded-lg mb-3 border border-white/10 font-mono text-[11px] font-bold shrink-0">
               <button
-                key={idx}
-                onClick={() => scrollToSlide(idx)}
-                className={`h-2 rounded-full transition-all ${
-                  activeMobileTab === idx ? "w-6 bg-[#59008C]" : "w-2 bg-white/20"
+                onClick={() => scrollToSlide(0)}
+                className={`py-2 px-1 text-center transition-colors rounded ${
+                  activeMobileTab === 0 ? "bg-white text-black font-black" : "text-neutral-400 hover:text-white"
                 }`}
-                aria-label={`Go to slide ${idx + 1}`}
-              />
-            ))}
+              >
+                1. Traditional
+              </button>
+              <button
+                onClick={() => scrollToSlide(1)}
+                className={`py-2 px-1 text-center transition-colors rounded ${
+                  activeMobileTab === 1 ? "bg-neutral-800 text-white font-black" : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                2. Vibe Coding
+              </button>
+              <button
+                onClick={() => scrollToSlide(2)}
+                className={`py-2 px-1 text-center transition-colors rounded ${
+                  activeMobileTab === 2 ? "bg-[#59008C] text-white font-black" : "text-neutral-400 hover:text-white"
+                }`}
+              >
+                3. DOTX Platform
+              </button>
+            </div>
+
+            {/* Sticky Horizontal Motion Track */}
+            <div className="overflow-hidden rounded-xl border border-white/10 shadow-lg shrink-0">
+              <motion.div
+                style={{ x: mobileX }}
+                className="flex w-[300%]"
+              >
+                {/* Slide 1: Traditional Development */}
+                <div className="w-1/3 shrink-0 bg-white text-black flex flex-col justify-between">
+                  <div className="p-3 border-b border-black/10">
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-black/5 text-neutral-600 mb-1">
+                      Manual Workflow
+                    </span>
+                    <h3 className="font-black font-mono text-sm uppercase tracking-wider text-black">
+                      Traditional Development
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-black/10">
+                    {phases.map((phase, i) => {
+                      const status = oldStatuses[i];
+                      return (
+                        <div key={i} className="p-2.5 flex items-center gap-2.5 relative overflow-hidden">
+                          <div className={`w-3.5 h-3.5 border shrink-0 flex items-center justify-center transition-all ${
+                            status === "idle" ? "border-black/20 text-black/20" :
+                            status === "running" ? "border-black bg-black/5 text-black" :
+                            "border-black bg-black text-white"
+                          }`}>
+                            {status === "running" && (
+                              <motion.div className="w-1 h-1 bg-black" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.6, repeat: Infinity }} />
+                            )}
+                            {status === "done" && (
+                              <svg className="w-2 h-2" fill="none" viewBox="0 0 12 12">
+                                <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                            {status === "idle" && <span className="text-[8px]">☑</span>}
+                          </div>
+                          <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-neutral-400" : "text-black"}`}>
+                            {phase.old}
+                          </p>
+                          {status === "running" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/10">
+                              <motion.div className="h-full bg-black/40" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="p-3 bg-neutral-100 border-t border-black/10 min-h-[44px] flex items-center">
+                    {oldDone ? (
+                      <p className="font-mono text-xs font-black uppercase text-black flex items-center gap-2">
+                        <span className="text-emerald-600 font-bold">✓</span> Project Ready
+                      </p>
+                    ) : (
+                      <p className="font-mono text-xs font-bold text-neutral-500 uppercase tracking-wider">Working...</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Slide 2: Vibe Coding */}
+                <div className="w-1/3 shrink-0 bg-[#121212] text-white flex flex-col justify-between">
+                  <div className="p-3 border-b border-white/10 bg-[#181818]">
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-white/10 text-neutral-300 mb-1">
+                      codex, claude code, etc.
+                    </span>
+                    <h3 className="font-black font-mono text-sm uppercase tracking-wider text-white">
+                      Vibe Coding
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-white/10">
+                    {phases.map((phase, i) => {
+                      const status = vibeStatuses[i];
+                      return (
+                        <div key={i} className="p-2.5 flex items-center gap-2.5 relative overflow-hidden">
+                          <div className={`w-3.5 h-3.5 border shrink-0 flex items-center justify-center transition-all ${
+                            status === "idle" ? "border-white/20 text-white/20" :
+                            status === "running" ? "border-white/40 bg-white/10 text-white" :
+                            "border-white bg-white text-black"
+                          }`}>
+                            {status === "running" && (
+                              <motion.div className="w-1 h-1 bg-white" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.4, repeat: Infinity }} />
+                            )}
+                            {status === "done" && (
+                              <svg className="w-2 h-2" fill="none" viewBox="0 0 12 12">
+                                <polyline points="2,6 5,9 10,3" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                            {status === "idle" && <span className="text-[8px]">☑</span>}
+                          </div>
+                          <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-neutral-500" : "text-neutral-200"}`}>
+                            {phase.vibe}
+                          </p>
+                          {status === "running" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10">
+                              <motion.div className="h-full bg-white/40" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="p-3 bg-[#181818] border-t border-white/10 min-h-[44px] flex items-center">
+                    {vibeDone ? (
+                      <p className="font-mono text-xs font-black uppercase text-white flex items-center gap-2">
+                        <span className="text-emerald-400 font-bold">✓</span> Project Ready
+                      </p>
+                    ) : (
+                      <p className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-wider">Prompting...</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Slide 3: DOTX Platform */}
+                <div className="w-1/3 shrink-0 bg-[#1a0029] text-white flex flex-col justify-between">
+                  <div className="p-3 border-b border-[#59008C]/60 bg-[#240038]">
+                    <span className="inline-block px-2 py-0.5 text-[10px] font-mono font-bold uppercase bg-[#59008C] text-white border border-[#59008C] mb-1">
+                      Autonomous AI Platform
+                    </span>
+                    <h3 className="font-black font-mono text-sm uppercase tracking-wider text-[#f3e8ff]">
+                      DOTX Platform
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-[#59008C]/40">
+                    {phases.map((phase, i) => {
+                      const status = dotxStatuses[i];
+                      return (
+                        <div key={i} className="p-2.5 flex items-center gap-2.5 relative overflow-hidden">
+                          <div className={`w-3.5 h-3.5 border shrink-0 flex items-center justify-center transition-all ${
+                            status === "idle" ? "border-[#59008C] text-[#59008C] bg-transparent" :
+                            status === "running" ? "border-[#59008C] bg-[#59008C] text-white" :
+                            "border-[#59008C] bg-[#59008C] text-white"
+                          }`}>
+                            {status === "running" && (
+                              <motion.div className="w-1 h-1 bg-white" animate={{ scale: [1, 0.4, 1] }} transition={{ duration: 0.3, repeat: Infinity }} />
+                            )}
+                            {status === "done" && (
+                              <svg className="w-2 h-2" fill="none" viewBox="0 0 12 12">
+                                <polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                            {status === "idle" && <span className="text-[8px]">☑</span>}
+                          </div>
+                          <p className={`font-mono text-xs font-bold ${status === "idle" ? "text-[#59008C]/60" : "text-[#f3e8ff]"}`}>
+                            {phase.dotx}
+                          </p>
+                          {status === "running" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#59008C]/30">
+                              <motion.div className="h-full bg-[#59008C]" initial={{ width: "0%" }} animate={{ width: "100%" }} transition={{ duration: STEP_DELAY / 1000, ease: "linear" }} />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="p-3 bg-[#240038] border-t border-[#59008C]/60 min-h-[44px] flex items-center">
+                    {dotxDone ? (
+                      <p className="font-mono text-xs font-black uppercase text-[#f3e8ff] flex items-center gap-2">
+                        <span className="text-emerald-400 font-bold">✓</span> Project Ready
+                      </p>
+                    ) : (
+                      <p className="font-mono text-xs font-bold text-[#59008C]/60 uppercase tracking-wider">Executing...</p>
+                    )}
+                  </div>
+                </div>
+
+              </motion.div>
+            </div>
+
+            {/* Mobile Dots Indicator */}
+            <div className="flex items-center justify-center gap-2 mt-3 shrink-0">
+              {[0, 1, 2].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => scrollToSlide(idx)}
+                  className={`h-2 rounded-full transition-all ${
+                    activeMobileTab === idx ? "w-6 bg-[#59008C]" : "w-2 bg-white/20"
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
